@@ -33,8 +33,8 @@
         </div>
         <div class="flex-grow-1 mb-3">
           <label class="form-label">Выберите таблицу</label>
-          <select class="form-control" type="file" @change="onFileChange">
-            <option v-for="f in excelFiles" :key="f" @click="selectedFile = f">
+          <select class="form-control" type="file" @change="onFileSelect" v-model="selectedFile">
+            <option v-for="f in excelFiles" :key="f">
               {{f}}
             </option>
           </select>
@@ -46,6 +46,14 @@
         </button>
       </form>
     </div>
+
+    <table v-if="selectedTable.length !== 0" class="table table-dark table-bordered mt-3">
+      <tr v-for="(arr, i1) in selectedTable" :key="i1">
+        <td v-for="(n, i2) in arr" :key="i2" :class="{ 'fw-bold': i1 === 0 || i2 === 0 }">
+          {{n}}
+        </td>
+      </tr>
+    </table>
   </section>
 </template>
 
@@ -64,6 +72,7 @@ export default {
     const interpolationResult = ref<number>(0)
     const excelFiles = ref<string[]>([])
     const selectedFile = ref<string>()
+    const selectedTable = ref<string[][]>([])
 
 
     function onFileChange(event: Event) {
@@ -88,10 +97,7 @@ export default {
           .then(r => {
             isFileUploading.value = false
             console.log(r)
-            if (r.status == 200) {
-              console.log("Uploaded file successfully")
-              return
-            }
+            console.log("Uploaded file successfully")
           })
           .catch(er => {
             isFileUploading.value = false
@@ -110,11 +116,8 @@ export default {
       )
           .then(r => {
             console.log(r)
-            if (r.status == 200) {
-              console.log("Processed successfully")
-              interpolationResult.value = parseFloat(r.data)
-              return
-            }
+            console.log("Processed successfully")
+            interpolationResult.value = parseFloat(r.data)
           })
           .catch((er: AxiosError) => {
             console.error(er.response?.data)
@@ -126,16 +129,28 @@ export default {
       )
           .then(r => {
             console.log(r)
-            if (r.status == 200) {
-              excelFiles.value = r.data
-              selectedFile.value = r.data[0]
-              return
-            }
+            excelFiles.value = r.data
+            selectedFile.value = r.data[0]
+            onFileSelect()
           })
           .catch(er => {
             console.error(er)
           })
     }
+    function onFileSelect() {
+      selectedTable.value = []
+      axios.get(
+          `http://26.29.14.210:8080/api/excel/files/${selectedFile.value}`
+      )
+          .then(r => {
+            console.log(r)
+            selectedTable.value = r.data as string[][]
+          })
+          .catch(er => {
+            console.error(er)
+          })
+    }
+
     getFiles()
 
     return {
@@ -150,9 +165,11 @@ export default {
       processInterpolation,
       interpolationResult,
 
-      getFiles,
       excelFiles,
-      selectedFile
+
+      onFileSelect,
+      selectedFile,
+      selectedTable,
     }
   },
 
